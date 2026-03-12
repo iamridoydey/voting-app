@@ -30,11 +30,11 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
         - name: mongo
-          image: mongo:6
+          image: mongo:latest
           command:
             # Memory allocation
-            - "numactl"
-            - "--interleave=all"
+            # - "numactl"
+            # - "--interleave=all"
             # Small cache sizing 0.1GB
             - "mongod"
             - "--wiredTigerCacheSizeGB"

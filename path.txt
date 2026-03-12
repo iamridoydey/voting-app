@@ -1,0 +1,7 @@
+1. Create cluster
+2. Add node group
+3. Create separate ec2 instance and install docker, kubectl, awscli, git
+4. set context: aws eks update-kubeconfig --name clusterName --region regionName
+5. Since we are using remote ec2 instance we have to edit the aws-auth configmap to add rolearn that I used.
+6. Run statefulset of mongodb. Then run the mongodb headless service.
+7. Use Replication of mongodb like primary and secondary.

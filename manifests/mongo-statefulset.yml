@@ -38,7 +38,7 @@ spec:
             # Small cache sizing 0.1GB
             - "mongod"
             - "--wiredTigerCacheSizeGB"
-            - "0.1"
+            - "0.25"
             # Listen on all interface
             - "--bind_ip"
             - "0.0.0.0"

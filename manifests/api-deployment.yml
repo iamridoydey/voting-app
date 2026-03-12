@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deploy
+  namespace: voting-app
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:     
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: iamridoydey/votingapp-api
+          ports:
+            - containerPort: 3000
+          env:
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: api-configmap
+                  key: FRONTEND_URL
+            - name: MONGO_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: api-configmap
+                  key: MONGO_HOST
+            - name: MONGO_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: api-configmap
+                  key: MONGO_DB
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: MONGO_USER
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: MONGO_PASSWORD
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1

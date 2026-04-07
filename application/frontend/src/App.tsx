@@ -15,8 +15,7 @@ type WindowWithRuntimeConfig = Window & {
 // Read API URL from environment (Vite exposes variables prefixed with VITE_)
 // const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3000";
 const API_URL =
-  (window as WindowWithRuntimeConfig).__RUNTIME_CONFIG__?.VITE_API_URL ||
-  "http://127.0.0.1:3000";
+  (window as WindowWithRuntimeConfig).__RUNTIME_CONFIG__?.VITE_API_URL
 
 function App() {
   const [languages, setLanguages] = useState<Language[]>([]);

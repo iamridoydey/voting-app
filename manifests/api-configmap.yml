@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: api-configmap
+  namespace: voting-app
 data:
   FRONTEND_URLS: "http://localhost:5173,http://127.0.0.1:5173"
   MONGO_DB: votingdb

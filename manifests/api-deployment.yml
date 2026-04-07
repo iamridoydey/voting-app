@@ -18,6 +18,13 @@ spec:
       containers:
         - name: api
           image: iamridoydey/votingapp-api
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
           ports:
             - containerPort: 3000
           env:
@@ -31,6 +38,11 @@ spec:
                 configMapKeyRef:
                   name: api-configmap
                   key: MONGO_HOST
+            - name: MONGO_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: api-configmap
+                  key: MONGO_URI
             - name: MONGO_DB
               valueFrom:
                 configMapKeyRef:

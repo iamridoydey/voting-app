@@ -31,6 +31,13 @@ spec:
       containers:
         - name: mongo
           image: mongo:latest
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "400m"
           command:
             # Memory allocation
             # - "numactl"

@@ -28,11 +28,11 @@ spec:
           ports:
             - containerPort: 3000
           env:
-            - name: FRONTEND_URL
+            - name: FRONTEND_URLS
               valueFrom:
                 configMapKeyRef:
                   name: api-configmap
-                  key: FRONTEND_URL
+                  key: FRONTEND_URLS
             - name: MONGO_HOST
               valueFrom:
                 configMapKeyRef:

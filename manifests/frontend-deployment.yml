@@ -32,12 +32,11 @@ spec:
               cpu: "200m"
           ports:
             - containerPort: 80 # Nginx serves on 80
-          env:
-            - name: VITE_API_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: frontend-configmap
-                  key: VITE_API_URL
+          volumeMounts:
+            - name: config-volume
+              mountPath: /usr/share/nginx/html/config.js
+              subPath: config.js
+
           livenessProbe:
             httpGet:
               path: /
@@ -51,3 +50,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             successThreshold: 1
+      volumes: 
+        - name: config-volume
+          configMap:
+            name: frontend-configmap

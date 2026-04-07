@@ -4,4 +4,7 @@ metadata:
   name: frontend-configmap
   namespace: voting-app
 data:
-  VITE_API_URL: http://127.0.0.1:3000
+  config.js: |
+    window.__RUNTIME_CONFIG__ = {
+      VITE_API_URL: "http://ac9e5db74f7344e7d921ebd2441ee776-843228423.us-east-1.elb.amazonaws.com"
+    };

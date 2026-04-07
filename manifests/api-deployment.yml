@@ -37,8 +37,8 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: api-configmap
-                  key: MONGO_HOST
-            - name: MONGO_URI
+                  key: MONGODB_HOST
+            - name: MONGODB_URI
               valueFrom:
                 configMapKeyRef:
                   name: api-configmap

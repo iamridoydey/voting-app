@@ -33,11 +33,6 @@ spec:
                 configMapKeyRef:
                   name: api-configmap
                   key: FRONTEND_URLS
-            - name: MONGO_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: api-configmap
-                  key: MONGO_HOST
             - name: MONGO_URI
               valueFrom:
                 configMapKeyRef:
@@ -48,16 +43,6 @@ spec:
                 configMapKeyRef:
                   name: api-configmap
                   key: MONGO_DB
-            - name: MONGO_USER
-              valueFrom:
-                secretKeyRef:
-                  name: mongo-secret
-                  key: MONGO_USER
-            - name: MONGO_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mongo-secret
-                  key: MONGO_PASSWORD
           livenessProbe:
             httpGet:
               path: /

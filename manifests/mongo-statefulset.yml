@@ -39,35 +39,25 @@ spec:
               memory: "512Mi"
               cpu: "400m"
           command:
-            # Memory allocation
-            # - "numactl"
-            # - "--interleave=all"
-            # Small cache sizing 0.1GB
             - "mongod"
             - "--wiredTigerCacheSizeGB"
             - "0.25"
-            # Listen on all interface
             - "--bind_ip"
             - "0.0.0.0"
-            # All replica get same name rs0
             - "--replSet"
             - "rs0"
           ports:
             - containerPort: 27017
-          env:
-            - name: MONGO_INITDB_ROOT_USERNAME
-              value: myuser
-            - name: MONGO_INITDB_ROOT_PASSWORD
-              value: mypassword
-          volumeMounts:
-            - name: mongo-persistent-storage
+          volumeMounts:                        
+            - name: persitent-storage
               mountPath: /data/db
   volumeClaimTemplates:
     - metadata:
-        name: mongo-persistent-storage
+        name: persitent-storage 
       spec:
         accessModes:
           - ReadWriteOnce
+        # storageClassName: local-storage  # For local setup
         storageClassName: gp3
         resources:
           requests:

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type Language = {
   name: string;
@@ -12,40 +12,55 @@ type WindowWithRuntimeConfig = Window & {
   };
 };
 
-// Read API URL from environment (Vite exposes variables prefixed with VITE_)
-// const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3000";
 const API_URL =
-  (window as WindowWithRuntimeConfig).__RUNTIME_CONFIG__?.VITE_API_URL
+  (window as WindowWithRuntimeConfig).__RUNTIME_CONFIG__?.VITE_API_URL?.replace(
+    /\/$/,
+    "",
+  ) || "http://127.0.0.1:3000";
+//            ↑ strip trailing slash defensively — a misconfigured ConfigMap
+//              value like "http://...elb.amazonaws.com/" would break fetch URLs
 
 function App() {
   const [languages, setLanguages] = useState<Language[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingVote, setLoadingVote] = useState<string | null>(null); // track which card is voting
 
-  // Fetch languages from Go API
   useEffect(() => {
     fetch(`${API_URL}/languages`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => setLanguages(data))
-      .catch((err) => console.error("Error fetching languages:", err));
+      .catch((err) => {
+        console.error("Error fetching languages:", err);
+        setError("Failed to load languages. Please try again later.");
+      });
   }, []);
 
-  // Vote handler (POST /languages)
-  const vote = async (name: string, delta: number) => {
+  // useCallback so vote doesn't get recreated on every render
+  const vote = useCallback(async (name: string, delta: number) => {
+    setLoadingVote(name); // disable buttons on the card being voted
     try {
       const res = await fetch(`${API_URL}/languages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, delta }),
       });
-      const updated = await res.json();
 
-      // Update local state with returned language object
-      setLanguages(
-        languages.map((l) => (l.name === updated.name ? updated : l)),
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const updated: Language = await res.json();
+
+      // Replace only the updated language, keep rest intact
+      setLanguages((prev) =>
+        prev.map((l) => (l.name === updated.name ? updated : l)),
       );
     } catch (err) {
       console.error("Error voting:", err);
+    } finally {
+      setLoadingVote(null);
     }
-  };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-cyan-700">
@@ -63,37 +78,53 @@ function App() {
         </h2>
       </header>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 mb-4 w-full">
+          <div className="bg-red-500 text-white text-center rounded-lg px-4 py-3 font-semibold">
+            {error}
+          </div>
+        </div>
+      )}
+
       {/* Grid of Cards */}
       <main className="grow">
         <div className="max-w-7xl mx-auto px-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {languages.map((lang) => (
-            <div
-              key={lang.name}
-              className="bg-yellow-300/40 backdrop-blur-md rounded-xl shadow-lg overflow-hidden flex flex-col items-center p-6 hover:scale-105 transform transition"
-            >
-              <img
-                src={lang.image}
-                alt={lang.name}
-                className="w-24 h-24 object-contain mb-4"
-              />
-              <h2 className="text-xl text-white font-bold mb-2">{lang.name}</h2>
-              <p className="text-white font-bold mb-4">Votes: {lang.votes}</p>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => vote(lang.name, 1)}
-                  className="px-4 py-2 bg-green-500 font-bold text-white rounded hover:bg-green-600 cursor-pointer"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => vote(lang.name, -1)}
-                  className="px-4 py-2 font-bold bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
-                >
-                  -
-                </button>
+          {languages.map((lang) => {
+            const isVoting = loadingVote === lang.name;
+            return (
+              <div
+                key={lang.name}
+                className="bg-yellow-300/40 backdrop-blur-md rounded-xl shadow-lg overflow-hidden flex flex-col items-center p-6 hover:scale-105 transform transition"
+              >
+                <img
+                  src={lang.image}
+                  alt={lang.name}
+                  className="w-24 h-24 object-contain mb-4"
+                />
+                <h2 className="text-xl text-white font-bold mb-2">
+                  {lang.name}
+                </h2>
+                <p className="text-white font-bold mb-4">Votes: {lang.votes}</p>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => vote(lang.name, 1)}
+                    disabled={isVoting}
+                    className="px-4 py-2 bg-green-500 font-bold text-white rounded hover:bg-green-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => vote(lang.name, -1)}
+                    disabled={isVoting}
+                    className="px-4 py-2 font-bold bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    -
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </main>
 

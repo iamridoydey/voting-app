@@ -1,77 +1,70 @@
 package db
 
 import (
-    "context"
-    "fmt"
-    "os"
-    "time"
+	"context"
+	"log"
+	"os"
+	"time"
 
-    "go.mongodb.org/mongo-driver/mongo"
-    "go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 var Client *mongo.Client
 var Collection *mongo.Collection
 
 func Connect() {
-    // First check if a full URI is provided
-    mongoURI := os.Getenv("MONGO_URI")
+	// In production, MONGO_URI is the ONLY connection config you need.
+	// For a StatefulSet ReplicaSet it looks like:
+	// mongodb://user:pass@mongo-0.mongo:27017,mongo-1.mongo:27017,mongo-2.mongo:27017/votingdb?replicaSet=rs0&authSource=admin
+	//
+	// For local dev without auth:
+	// mongodb://localhost:27017/votingdb
+	mongoURI := os.Getenv("MONGO_URI")
+	if mongoURI == "" {
+		// Sensible local dev fallback — no URI building logic in production
+		mongoURI = "mongodb://localhost:27017/votingdb"
+		log.Println("[db] MONGO_URI not set, falling back to localhost")
+	}
 
-    if mongoURI == "" {
-        // Otherwise build from individual parts
-        user := os.Getenv("MONGO_USER")
-        pass := os.Getenv("MONGO_PASSWORD")
-        host := os.Getenv("MONGO_HOST") // EX: "localhost:27017" or "mongo:27017"
-        dbName := os.Getenv("MONGO_DB") // EX: "votingdb"
+	dbName := os.Getenv("MONGO_DB")
+	if dbName == "" {
+		dbName = "votingdb"
+	}
 
-        if host == "" {
-            host = "localhost:27017"
-        }
-        if dbName == "" {
-            dbName = "votingdb"
-        }
+	// clientOptions: driver reads replicaSet, auth, TLS etc. directly from the URI
+	clientOptions := options.Client().
+		ApplyURI(mongoURI).
+		// For a ReplicaSet: prefer reading from secondary to reduce primary load.
+		// Use readpref.Primary() if you need strong consistency on reads.
+		SetReadPreference(readpref.SecondaryPreferred())
 
-        if user != "" && pass != "" {
-            // Authenticated URI
-            mongoURI = fmt.Sprintf("mongodb://%s:%s@%s/%s?authSource=admin", user, pass, host, dbName)
-        } else {
-            // No-auth fallback
-            mongoURI = fmt.Sprintf("mongodb://%s/%s", host, dbName)
-        }
-    }
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-    // Create context with timeout
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		log.Fatalf("[db] Failed to create mongo client: %v", err)
+	}
 
-    // Connect to MongoDB
-    client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
-    if err != nil {
-        panic(err)
-    }
+	// Ping verifies at least one replicaset member is reachable
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+		log.Fatalf("[db] Failed to ping MongoDB: %v", err)
+	}
 
-    // Ping to verify connection
-    if err := client.Ping(ctx, nil); err != nil {
-        panic(err)
-    }
-
-    // Assign globals
-    Client = client
-    // Always use dbName from URI or env
-    dbName := os.Getenv("MONGO_DB")
-    if dbName == "" {
-        dbName = "votingdb"
-    }
-    Collection = client.Database(dbName).Collection("languages")
+	Client = client
+	Collection = client.Database(dbName).Collection("languages")
+	log.Printf("[db] Connected to MongoDB | database: %s", dbName)
 }
 
-// Optional: Graceful disconnect
 func Disconnect() {
-    if Client != nil {
-        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-        defer cancel()
-        if err := Client.Disconnect(ctx); err != nil {
-            panic(err)
-        }
-    }
+	if Client == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := Client.Disconnect(ctx); err != nil {
+		log.Printf("[db] Error during disconnect: %v", err)
+	}
 }
